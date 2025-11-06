@@ -113,7 +113,7 @@ export default function Navigation() {
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/auth/signin" className="flex-shrink-0">
+                <Link href="/auth/register" className="flex-shrink-0">
                   <Button variant="primary" size="sm" className="text-xs lg:text-sm px-3 lg:px-4 whitespace-nowrap">
                     Get Started
                   </Button>
@@ -208,7 +208,7 @@ export default function Navigation() {
                       Sign In
                     </Button>
                   </Link>
-                  <Link href="/auth/signin" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href="/auth/register" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="primary" size="sm" className="w-full justify-center text-sm">
                       Get Started
                     </Button>
