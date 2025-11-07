@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useSignIn } from '@/hooks/useSignIn'
@@ -19,16 +19,13 @@ import type { SignInFormData } from '@/types/auth'
 
 export default function SignInPage() {
   const searchParams = useSearchParams()
-  const { signInUser, isLoading, errors, apiError, clearErrors, clearApiError } = useSignIn()
+  const { signInUser, isLoading, errors, clearErrors } = useSignIn()
 
   // Form state
   const [formData, setFormData] = useState<SignInFormData>({
     email: '',
     password: ''
   })
-
-  // Get initial message from URL params (e.g., success from registration)
-  const initialMessage = searchParams?.get('message')
 
   /**
    * Handle form submission
@@ -53,12 +50,7 @@ export default function SignInPage() {
     if (hasFieldError(errors, name as keyof SignInFormData)) {
       clearErrors()
     }
-
-    // Clear API error when user makes changes
-    if (apiError) {
-      clearApiError()
-    }
-  }, [errors, apiError, clearErrors, clearApiError])
+  }, [errors, clearErrors])
 
   /**
    * Get CSS classes for input field based on error state
@@ -92,20 +84,6 @@ export default function SignInPage() {
 
         {/* Sign In Form */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/20">
-          {/* Success Message */}
-          {initialMessage && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-700 text-sm">{decodeURIComponent(initialMessage)}</p>
-            </div>
-          )}
-
-          {/* API Error */}
-          {apiError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{apiError}</p>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div>

@@ -3,7 +3,9 @@
 import { useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { dropApi, isApiError } from '@/lib/dropApi';
+import { errorHandler } from '@/lib/errorHandler';
 import { WaitlistResponse } from '@/types/drops';
+import type { ApiError } from '@/types/errors';
 
 export interface WaitlistStatus {
   isJoined: boolean;
@@ -55,7 +57,12 @@ export function useWaitlist(): UseWaitlistReturn {
       const response = await dropApi.getWaitlistStatus(dropId);
 
       if (isApiError(response)) {
-        setError(response.error.message);
+        const apiError: ApiError = {
+          success: false,
+          message: response.error.message,
+          status: 400
+        };
+        errorHandler.handleError(apiError, 'waitlist_join');
         setWaitlistStatus({ isJoined: false });
         return;
       }
@@ -70,7 +77,7 @@ export function useWaitlist(): UseWaitlistReturn {
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to check waitlist status';
-      setError(errorMessage);
+      errorHandler.handleError(new Error(errorMessage), 'waitlist_join');
       setWaitlistStatus({ isJoined: false });
     } finally {
       setIsLoading(false);
@@ -79,7 +86,7 @@ export function useWaitlist(): UseWaitlistReturn {
 
   const joinWaitlist = useCallback(async (dropId: string): Promise<boolean> => {
     if (!session?.user) {
-      setError('Please sign in to join waitlist');
+      errorHandler.handleError(new Error('Please sign in to join waitlist'), 'auth_login');
       return false;
     }
 
@@ -90,7 +97,12 @@ export function useWaitlist(): UseWaitlistReturn {
       const response = await dropApi.joinWaitlist(dropId);
 
       if (isApiError(response)) {
-        setError(response.error.message);
+        const apiError: ApiError = {
+          success: false,
+          message: response.error.message,
+          status: 400
+        };
+        errorHandler.handleError(apiError, 'waitlist_join');
         return false;
       }
 
@@ -107,7 +119,7 @@ export function useWaitlist(): UseWaitlistReturn {
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to join waitlist';
-      setError(errorMessage);
+      errorHandler.handleError(new Error(errorMessage), 'waitlist_join');
       return false;
     } finally {
       setIsLoading(false);
@@ -116,7 +128,7 @@ export function useWaitlist(): UseWaitlistReturn {
 
   const leaveWaitlist = useCallback(async (dropId: string): Promise<boolean> => {
     if (!session?.user) {
-      setError('Authentication required');
+      errorHandler.handleError(new Error('Authentication required'), 'auth_login');
       return false;
     }
 
@@ -127,7 +139,12 @@ export function useWaitlist(): UseWaitlistReturn {
       const response = await dropApi.leaveWaitlist(dropId);
 
       if (isApiError(response)) {
-        setError(response.error.message);
+        const apiError: ApiError = {
+          success: false,
+          message: response.error.message,
+          status: 400
+        };
+        errorHandler.handleError(apiError, 'waitlist_leave');
         return false;
       }
 
@@ -137,7 +154,7 @@ export function useWaitlist(): UseWaitlistReturn {
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to leave waitlist';
-      setError(errorMessage);
+      errorHandler.handleError(new Error(errorMessage), 'waitlist_leave');
       return false;
     } finally {
       setIsLoading(false);

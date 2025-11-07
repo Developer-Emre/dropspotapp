@@ -7,6 +7,9 @@ import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { validateSignIn, type ValidationErrors } from '@/lib/validators'
 import type { SignInFormData } from '@/types/auth'
+import { errorHandler } from '@/lib/errorHandler'
+import { ApiError } from '@/types/errors'
+import { useErrorToast } from '@/providers/ErrorToastProvider'
 
 // ============================================
 // TYPES
@@ -16,9 +19,7 @@ interface UseSignInReturn {
   signInUser: (formData: SignInFormData) => Promise<void>
   isLoading: boolean
   errors: ValidationErrors
-  apiError: string | null
   clearErrors: () => void
-  clearApiError: () => void
 }
 
 // ============================================
@@ -28,8 +29,8 @@ interface UseSignInReturn {
 export function useSignIn(): UseSignInReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
-  const [apiError, setApiError] = useState<string | null>(null)
   const router = useRouter()
+  const { showSuccess } = useErrorToast()
 
   /**
    * Clear validation errors
@@ -39,19 +40,11 @@ export function useSignIn(): UseSignInReturn {
   }, [])
 
   /**
-   * Clear API error
-   */
-  const clearApiError = useCallback(() => {
-    setApiError(null)
-  }, [])
-
-  /**
    * Sign in user
    */
   const signInUser = useCallback(async (formData: SignInFormData) => {
     try {
       setIsLoading(true)
-      setApiError(null)
 
       // Validate form data
       const validationResult = validateSignIn(formData)
@@ -71,28 +64,46 @@ export function useSignIn(): UseSignInReturn {
       })
 
       if (result?.error) {
-        setApiError('Invalid email or password. Please try again.')
+        // NextAuth error - could be invalid credentials or server error
+        let errorMessage = 'Invalid email or password';
+        let statusCode = 401;
+        
+        // Try to parse more specific error info from result
+        if (result.error === 'CredentialsSignin') {
+          errorMessage = 'Invalid email or password';
+          statusCode = 401;
+        } else if (result.error.includes('fetch')) {
+          errorMessage = 'Unable to connect to server';
+          statusCode = 500;
+        }
+        
+        const apiError: ApiError = {
+          success: false,
+          message: errorMessage,
+          status: statusCode
+        };
+        errorHandler.handleError(apiError, 'auth_login');
         return
       }
 
-      // Success - redirect to home
+      // Success - show success message and redirect
+      showSuccess('Welcome Back!', 'You have successfully signed in')
       router.push('/')
       router.refresh()
 
     } catch (error) {
       console.error('Sign in error:', error)
-      setApiError('An unexpected error occurred. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      errorHandler.handleError(new Error(errorMessage), 'auth_login');
     } finally {
       setIsLoading(false)
     }
-  }, [router])
+  }, [router, showSuccess])
 
   return {
     signInUser,
     isLoading,
     errors,
-    apiError,
-    clearErrors,
-    clearApiError
+    clearErrors
   }
 }
