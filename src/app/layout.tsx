@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import Navigation from "@/components/layout/Navigation";
+import ConditionalNavigation from "@/components/layout/ConditionalNavigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,10 +36,9 @@ export default function RootLayout({
       >
         <ErrorBoundary>
           <Providers>
-            <Navigation />
-            <main className="min-h-screen">
+            <ConditionalNavigation>
               {children}
-            </main>
+            </ConditionalNavigation>
             {/* Toast notifications will be rendered here via portal */}
             <div id="toast-portal"></div>
           </Providers>
