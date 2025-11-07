@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { useRegister } from '@/hooks/useRegister'
 import { getFieldError, hasFieldError } from '@/lib/validators'
 import Button from '@/components/ui/Button'
+import { useErrorToast } from '@/providers/ErrorToastProvider'
 import type { RegisterFormData } from '@/types/auth'
 
 // ============================================
@@ -18,7 +19,7 @@ import type { RegisterFormData } from '@/types/auth'
 
 export default function RegisterPage() {
   const searchParams = useSearchParams()
-  const { register, isLoading, errors, apiError, clearErrors, clearApiError } = useRegister()
+  const { register, isLoading, errors, clearErrors } = useRegister()
 
   // Form state
   const [formData, setFormData] = useState<RegisterFormData>({
@@ -55,12 +56,7 @@ export default function RegisterPage() {
     if (hasFieldError(errors, name as keyof RegisterFormData)) {
       clearErrors()
     }
-
-    // Clear API error when user makes changes
-    if (apiError) {
-      clearApiError()
-    }
-  }, [errors, apiError, clearErrors, clearApiError])
+  }, [errors, clearErrors])
 
   /**
    * Get CSS classes for input field based on error state
@@ -97,13 +93,6 @@ export default function RegisterPage() {
           {initialMessage && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-blue-700 text-sm">{initialMessage}</p>
-            </div>
-          )}
-
-          {/* API Error */}
-          {apiError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{apiError}</p>
             </div>
           )}
 

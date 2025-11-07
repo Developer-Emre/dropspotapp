@@ -7,12 +7,21 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import Button from '@/components/ui/Button'
+import { useErrorToast } from '@/providers/ErrorToastProvider'
 
 export default function Navigation() {
   const { data: session, status } = useSession()
+  const pathname = usePathname()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { showSuccess } = useErrorToast()
+
+  const handleSignOut = async () => {
+    showSuccess('Signed Out', 'You have been successfully signed out')
+    await signOut({ callbackUrl: '/' })
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,24 +63,28 @@ export default function Navigation() {
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-6 flex-shrink-0">
             {[
-              { href: '/', label: 'Home', active: true },
-              { href: '/drops', label: 'Drops', active: false },
-              { href: '/waitlist', label: 'My Waitlist', active: false, authRequired: true },
-              { href: '/about', label: 'About', active: false },
-              { href: '/contact', label: 'Contact', active: false }
-            ].filter(link => !link.authRequired || session?.user).map((link) => (
+              { href: '/', label: 'Home' },
+              { href: '/drops', label: 'Drops' },
+              { href: '/waitlist', label: 'My Waitlist', authRequired: true },
+              { href: '/my-claims', label: 'My Claims', authRequired: true },
+              { href: '/about', label: 'About' },
+              { href: '/contact', label: 'Contact' }
+            ].filter(link => !link.authRequired || session?.user).map((link) => {
+              const isActive = pathname === link.href;
+              return (
               <Link
                 key={link.href}
                 href={link.href}
                 className={`font-medium transition-colors duration-150 whitespace-nowrap ${
-                  link.active
-                    ? 'text-primary-600'
+                  isActive
+                    ? 'text-primary-600 font-semibold'
                     : 'text-secondary-600 hover:text-primary-600'
                 }`}
               >
                 {link.label}
               </Link>
-            ))}
+              );
+            })}
           </div>
 
           {/* Authentication Section - Desktop */}
@@ -101,7 +114,7 @@ export default function Navigation() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => signOut()}
+                  onClick={handleSignOut}
                   className="flex-shrink-0"
                 >
                   Sign Out
@@ -147,18 +160,29 @@ export default function Navigation() {
               {[
                 { href: '/', label: 'Home' },
                 { href: '/drops', label: 'Drops' },
+                ...(session?.user ? [
+                  { href: '/waitlist', label: 'My Waitlist' },
+                  { href: '/my-claims', label: 'My Claims' }
+                ] : []),
                 { href: '/about', label: 'About' },
                 { href: '/contact', label: 'Contact' }
-              ].map((link) => (
+              ].map((link) => {
+                const isActive = pathname === link.href;
+                return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="block px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-secondary-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                  className={`block px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base rounded-lg transition-colors ${
+                    isActive
+                      ? 'text-primary-600 bg-primary-50 font-semibold'
+                      : 'text-secondary-600 hover:text-primary-600 hover:bg-primary-50'
+                  }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}
                 </Link>
-              ))}
+                );
+              })}
             </div>
 
             {/* Mobile Authentication Section */}
@@ -196,7 +220,7 @@ export default function Navigation() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => signOut()}
+                    onClick={handleSignOut}
                     className="w-full"
                   >
                     Sign Out

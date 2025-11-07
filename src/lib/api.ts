@@ -1,3 +1,4 @@
+
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { getSession } from 'next-auth/react'
 import { RegisterRequest, RegisterResponse, LoginCredentials } from '@/types/auth'
@@ -11,6 +12,7 @@ export interface BackendApiResponse<T = unknown> {
     code: string
     message: string
   }
+  status?: number
 }
 
 // Backend User Response (from actual API response)
@@ -72,7 +74,11 @@ class ApiClient {
     if (error instanceof AxiosError && error.response?.data) {
       const errorData = error.response.data
       if (errorData.success === false) {
-        return errorData
+        // Add status code to error response
+        return {
+          ...errorData,
+          status: error.response.status
+        }
       }
     }
 
@@ -131,7 +137,8 @@ export const loginUser = async (credentials: LoginCredentials): Promise<Register
   return {
     success: false,
     error: response.error?.message || response.message || 'Login failed',
-    message: response.message
+    message: response.message,
+    status: response.status
   }
 }
 
@@ -168,6 +175,7 @@ export const registerUser = async (userData: RegisterRequest): Promise<RegisterR
   return {
     success: false,
     error: response.error?.message || response.message || 'Registration failed',
-    message: response.message
+    message: response.message,
+    status: response.status
   }
 }

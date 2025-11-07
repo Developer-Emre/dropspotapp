@@ -40,6 +40,8 @@ export default function RootLayout({
             <main className="min-h-screen">
               {children}
             </main>
+            {/* Toast notifications will be rendered here via portal */}
+            <div id="toast-portal"></div>
           </Providers>
         </ErrorBoundary>
       </body>

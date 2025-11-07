@@ -30,6 +30,13 @@ export const authOptions = {
             }
           }
 
+          // Log the actual error for debugging
+          console.error('Login failed:', {
+            error: result.error,
+            status: result.status,
+            message: result.message
+          })
+
           return null
         } catch (error) {
           console.error('Auth error:', error)

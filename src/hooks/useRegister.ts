@@ -13,6 +13,9 @@ import type {
   RegisterRequest, 
   RegisterResponse 
 } from '@/types/auth'
+import { errorHandler } from '@/lib/errorHandler'
+import { ApiError } from '@/types/errors'
+import { useErrorToast } from '@/providers/ErrorToastProvider'
 
 // ============================================
 // HOOK STATE TYPES
@@ -21,13 +24,11 @@ import type {
 interface UseRegisterState {
   isLoading: boolean
   errors: ValidationErrors
-  apiError: string | null
 }
 
 interface UseRegisterActions {
   register: (formData: RegisterFormData) => Promise<void>
   clearErrors: () => void
-  clearApiError: () => void
 }
 
 interface UseRegisterReturn extends UseRegisterState, UseRegisterActions {}
@@ -42,12 +43,12 @@ interface UseRegisterReturn extends UseRegisterState, UseRegisterActions {}
  */
 export const useRegister = (): UseRegisterReturn => {
   const router = useRouter()
+  const { showSuccess } = useErrorToast()
   
   // State management
   const [state, setState] = useState<UseRegisterState>({
     isLoading: false,
-    errors: {},
-    apiError: null
+    errors: {}
   })
 
   /**
@@ -58,33 +59,32 @@ export const useRegister = (): UseRegisterReturn => {
   }, [])
 
   /**
-   * Clear API error
-   */
-  const clearApiError = useCallback(() => {
-    setState(prev => ({ ...prev, apiError: null }))
-  }, [])
-
-  /**
    * Handle successful registration
    * @param response - Registration response from API
    */
   const handleRegistrationSuccess = useCallback(async (
     response: RegisterResponse
   ): Promise<void> => {
-    // Registration successful - redirect to sign-in with success message
-    const message = encodeURIComponent('Registration successful! Please sign in with your credentials.')
-    router.push(`/auth/signin?message=${message}`)
-  }, [router])
+    // Show success toast
+    showSuccess('Registration Successful', 'Please sign in with your credentials')
+    
+    // Redirect to sign-in page
+    router.push('/auth/signin')
+  }, [router, showSuccess])
 
   /**
    * Handle registration failure
    * @param response - Failed registration response
    */
   const handleRegistrationFailure = useCallback((response: RegisterResponse): void => {
-    const errorMessage = response.error || response.message || 'Registration failed'
+    const apiError: ApiError = {
+      success: false,
+      message: response.error || response.message || 'Registration failed',
+      status: response.status || 400
+    };
+    errorHandler.handleError(apiError, 'auth_register');
     setState(prev => ({ 
       ...prev, 
-      apiError: errorMessage,
       isLoading: false 
     }))
   }, [])
@@ -95,7 +95,7 @@ export const useRegister = (): UseRegisterReturn => {
    */
   const register = useCallback(async (formData: RegisterFormData): Promise<void> => {
     // Clear previous errors
-    setState(prev => ({ ...prev, errors: {}, apiError: null }))
+    setState(prev => ({ ...prev, errors: {} }))
 
     // Validate form data
     const validation = validateRegisterForm(formData)
@@ -132,9 +132,10 @@ export const useRegister = (): UseRegisterReturn => {
       }
     } catch (error) {
       console.error('Registration error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+      errorHandler.handleError(new Error(errorMessage), 'auth_register');
       setState(prev => ({ 
         ...prev, 
-        apiError: 'Something went wrong. Please try again.',
         isLoading: false 
       }))
     }
@@ -144,11 +145,9 @@ export const useRegister = (): UseRegisterReturn => {
     // State
     isLoading: state.isLoading,
     errors: state.errors,
-    apiError: state.apiError,
     
     // Actions
     register,
-    clearErrors,
-    clearApiError
+    clearErrors
   }
 }
