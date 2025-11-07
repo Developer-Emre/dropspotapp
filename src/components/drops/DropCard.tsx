@@ -15,6 +15,7 @@ import {
   useCheckWaitlistStatus,
   useClearWaitlistError
 } from '@/store/waitlistStore';
+import { ClaimButton } from '@/components/claims/ClaimButton';
 import WaitlistPositionTracker from './WaitlistPositionTracker';
 
 interface DropCardProps {
@@ -255,12 +256,27 @@ export default function DropCard({
           )}
           
           {phase.current === 'claiming' && canClaim && (
-            <Link
-              href={`/drops/${drop.id}`}
-              className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium text-sm text-center transition-colors"
+            <div className="flex-1">
+              <ClaimButton
+                drop={drop}
+                size="sm"
+                onSuccess={() => {
+                  logUserAction('claim_success_from_card', { dropId: drop.id });
+                }}
+                onError={(error) => {
+                  logError('claim_error_from_card', { dropId: drop.id, error });
+                }}
+              />
+            </div>
+          )}
+
+          {phase.current === 'claiming' && !canClaim && (
+            <button
+              disabled
+              className="flex-1 py-2 px-4 bg-gray-300 text-gray-500 rounded-md font-medium text-sm cursor-not-allowed"
             >
-              Claim Now
-            </Link>
+              Out of Stock
+            </button>
           )}
 
           {phase.current === 'upcoming' && (

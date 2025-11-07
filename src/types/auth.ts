@@ -89,6 +89,7 @@ export interface RegisterResponse {
     token: string
   }
   error?: string
+  status?: number
 }
 
 // ============================================

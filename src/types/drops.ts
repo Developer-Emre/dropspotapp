@@ -48,6 +48,15 @@ export interface Claim {
   expiresAt: string; // ISO date string
   createdAt: string; // ISO date string
   completedAt?: string; // ISO date string
+  isExpired?: boolean; // calculated field from API
+  drop?: {
+    id: string;
+    title: string;
+    description: string;
+    imageUrl: string;
+    claimWindowStart: string;
+    claimWindowEnd: string;
+  };
 }
 
 export type ClaimStatus = 'pending' | 'completed' | 'expired';

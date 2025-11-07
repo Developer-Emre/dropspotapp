@@ -5,12 +5,12 @@ import { dropApi, isApiError, dropUtils } from '@/lib/dropApi';
 import { Drop } from '@/types/drops';
 import DropCard from '@/components/drops/DropCard';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import ErrorMessage from '@/components/ui/ErrorMessage';
+import { errorHandler } from '@/lib/errorHandler';
+import { ApiError } from '@/types/errors';
 
 export default function DropsPage() {
   const [drops, setDrops] = useState<Drop[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'waitlist' | 'claiming' | 'ended'>('all');
 
   useEffect(() => {
@@ -20,18 +20,23 @@ export default function DropsPage() {
   const loadDrops = async () => {
     try {
       setLoading(true);
-      setError(null);
       
       const response = await dropApi.getDrops();
       
       if (isApiError(response)) {
-        setError(response.error.message);
+        const apiError: ApiError = {
+          success: false,
+          message: response.error.message,
+          status: 400
+        };
+        errorHandler.handleError(apiError, 'drop_fetch');
         return;
       }
       
       setDrops(response.data);
     } catch (err) {
-      setError('Failed to load drops. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load drops';
+      errorHandler.handleError(new Error(errorMessage), 'drop_fetch');
     } finally {
       setLoading(false);
     }
@@ -82,16 +87,6 @@ export default function DropsPage() {
             Discover and join exclusive product drops
           </p>
         </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6">
-            <ErrorMessage 
-              message={error} 
-              onRetry={loadDrops}
-            />
-          </div>
-        )}
 
         {/* Filter Tabs */}
         <div className="mb-6">
@@ -165,14 +160,6 @@ export default function DropsPage() {
                 : `No drops are currently in the "${filter}" phase.`
               }
             </p>
-            {error && (
-              <button
-                onClick={loadDrops}
-                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-              >
-                Try Again
-              </button>
-            )}
           </div>
         )}
       </div>

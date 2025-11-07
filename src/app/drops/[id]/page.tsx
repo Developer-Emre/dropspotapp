@@ -5,17 +5,25 @@ import { useParams } from 'next/navigation';
 import { dropApi, isApiError, dropUtils } from '@/lib/dropApi';
 import { Drop } from '@/types/drops';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import ErrorMessage from '@/components/ui/ErrorMessage';
+import { ClaimButton } from '@/components/claims/ClaimButton';
+import { ClaimCountdown } from '@/components/claims/ClaimCountdown';
+import { useClaim } from '@/hooks/useClaim';
+import { useSession } from 'next-auth/react';
+import { errorHandler } from '@/lib/errorHandler';
+import { ApiError } from '@/types/errors';
 
 export default function DropDetailPage() {
   const params = useParams();
+  const { data: session } = useSession();
   const dropId = params.id as string;
   
   const [drop, setDrop] = useState<Drop | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<string>('');
   const [phase, setPhase] = useState<any>(null);
+
+  // Use claim hook for this drop
+  const claimHook = useClaim({ dropId });
 
   useEffect(() => {
     if (dropId) {
@@ -47,18 +55,23 @@ export default function DropDetailPage() {
   const loadDrop = async () => {
     try {
       setLoading(true);
-      setError(null);
       
-      const response = await dropApi.getDropById(dropId);
+      const response = await dropApi.getDrop(dropId);
       
       if (isApiError(response)) {
-        setError(response.error.message);
+        const apiError: ApiError = {
+          success: false,
+          message: response.error.message,
+          status: 404
+        };
+        errorHandler.handleError(apiError, 'drop_fetch');
         return;
       }
       
       setDrop(response.data);
     } catch (err) {
-      setError('Failed to load drop details. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load drop details';
+      errorHandler.handleError(new Error(errorMessage), 'drop_fetch');
     } finally {
       setLoading(false);
     }
@@ -103,14 +116,18 @@ export default function DropDetailPage() {
     );
   }
 
-  if (error || !drop) {
+  if (!drop) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="max-w-md w-full">
-          <ErrorMessage 
-            message={error || 'Drop not found'} 
-            onRetry={loadDrop}
-          />
+        <div className="max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Drop not found</h2>
+          <p className="text-gray-600 mb-6">The drop you're looking for doesn't exist or has been removed.</p>
+          <button
+            onClick={loadDrop}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -241,58 +258,96 @@ export default function DropDetailPage() {
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Action Required</h3>
               
-              {/* Waitlist Phase */}
-              {phase?.current === 'waitlist' && canJoinWaitlist && (
-                <div>
-                  <p className="text-gray-600 mb-4">
-                    Join the waitlist to be eligible for claiming when the window opens.
-                  </p>
-                  <button
-                    onClick={handleWaitlistJoin}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors"
-                  >
-                    Join Waitlist
-                  </button>
-                </div>
-              )}
-
-              {/* Claiming Phase */}
-              {phase?.current === 'claiming' && canClaim && (
-                <div>
-                  <p className="text-gray-600 mb-4">
-                    The claiming window is now open! You have 24 hours to complete your claim.
-                  </p>
-                  <button
-                    onClick={handleClaim}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium transition-colors"
-                  >
-                    Claim Now
-                  </button>
-                </div>
-              )}
-
-              {/* Upcoming Phase */}
-              {phase?.current === 'upcoming' && (
+              {!session && (
                 <div className="text-center">
                   <p className="text-gray-600 mb-4">
-                    This drop hasn't started yet. Check back when the waitlist opens!
+                    Please sign in to participate in drops.
                   </p>
-                  <div className="w-full bg-gray-300 text-gray-500 py-3 px-6 rounded-lg font-medium">
-                    Coming Soon
-                  </div>
+                  <a
+                    href="/auth/signin"
+                    className="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors text-center"
+                  >
+                    Sign In
+                  </a>
                 </div>
               )}
 
-              {/* Ended Phase */}
-              {phase?.current === 'ended' && (
-                <div className="text-center">
-                  <p className="text-gray-600 mb-4">
-                    This drop has ended. Check out other available drops!
-                  </p>
-                  <div className="w-full bg-gray-300 text-gray-500 py-3 px-6 rounded-lg font-medium">
-                    Drop Ended
-                  </div>
-                </div>
+              {session && (
+                <>
+                  {/* Claiming Phase */}
+                  {phase?.current === 'claiming' && (
+                    <div className="space-y-4">
+                      <p className="text-gray-600">
+                        The claiming window is now open! You have 24 hours to complete your claim.
+                      </p>
+                      
+                      {/* Active Claim Countdown */}
+                      {claimHook.claim && claimHook.isPending && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <ClaimCountdown
+                            claim={claimHook.claim}
+                            size="md"
+                            onExpiry={() => {
+                              // Refresh claim status when expired
+                              claimHook.checkClaimStatus();
+                            }}
+                          />
+                        </div>
+                      )}
+                      
+                      <ClaimButton
+                        drop={drop}
+                        size="lg"
+                        className="w-full"
+                        onSuccess={(claimId) => {
+                          console.log('Claim successful:', claimId);
+                        }}
+                        onError={(error) => {
+                          console.error('Claim failed:', error);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Waitlist Phase */}
+                  {phase?.current === 'waitlist' && (
+                    <div>
+                      <p className="text-gray-600 mb-4">
+                        Join the waitlist to be eligible for claiming when the window opens.
+                      </p>
+                      <button
+                        onClick={handleWaitlistJoin}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors"
+                      >
+                        Join Waitlist
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Upcoming Phase */}
+                  {phase?.current === 'upcoming' && (
+                    <div className="text-center">
+                      <p className="text-gray-600 mb-4">
+                        This drop hasn't started yet. Check back when the waitlist opens!
+                      </p>
+                      <div className="w-full bg-gray-300 text-gray-500 py-3 px-6 rounded-lg font-medium">
+                        Coming Soon
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ended Phase */}
+                  {phase?.current === 'ended' && (
+                    <div className="text-center">
+                      <p className="text-gray-600 mb-4">
+                        This drop has ended. Check out other available drops!
+                      </p>
+                      <div className="w-full bg-gray-300 text-gray-500 py-3 px-6 rounded-lg font-medium">
+                        Drop Ended
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
