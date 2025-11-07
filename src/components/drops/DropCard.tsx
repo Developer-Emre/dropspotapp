@@ -2,8 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Drop } from '@/types/drops';
 import { dropUtils } from '@/lib/dropApi';
+import { logUserAction, logError } from '@/lib/logger';
+import { 
+  useWaitlistEntry, 
+  useWaitlistLoading, 
+  useWaitlistError, 
+  useJoinWaitlist,
+  useLeaveWaitlist,
+  useCheckWaitlistStatus,
+  useClearWaitlistError
+} from '@/store/waitlistStore';
+import WaitlistPositionTracker from './WaitlistPositionTracker';
 
 interface DropCardProps {
   drop: Drop;
@@ -21,8 +33,20 @@ export default function DropCard({
   onLeaveWaitlist, 
   userWaitlistStatus 
 }: DropCardProps) {
+  const { data: session } = useSession();
+  
+  // Zustand store selectors - individual selectors for stability
+  const waitlistEntry = useWaitlistEntry(drop.id);
+  const waitlistLoading = useWaitlistLoading(drop.id);
+  const waitlistError = useWaitlistError(drop.id);
+  const joinWaitlist = useJoinWaitlist();
+  const leaveWaitlist = useLeaveWaitlist();
+  const checkWaitlistStatus = useCheckWaitlistStatus();
+  const clearError = useClearWaitlistError();
+  
   const [timeRemaining, setTimeRemaining] = useState<string>('');
   const [phase, setPhase] = useState(dropUtils.calculatePhase(drop));
+  const [optimisticState, setOptimisticState] = useState<{isJoined: boolean; position?: number} | null>(null);
 
   useEffect(() => {
     const updateCountdown = () => {
@@ -43,6 +67,20 @@ export default function DropCard({
     return () => clearInterval(interval);
   }, [drop]);
 
+  // Check waitlist status when component mounts and user is authenticated
+  useEffect(() => {
+    if (session?.user) {
+      checkWaitlistStatus(drop.id);
+    }
+  }, [session?.user, drop.id]); // Removed checkWaitlistStatus as it's now stable
+
+  // Reset optimistic state when real state updates
+  useEffect(() => {
+    if (waitlistEntry) {
+      setOptimisticState(null);
+    }
+  }, [waitlistEntry]);
+
   const getPhaseInfo = () => {
     const color = dropUtils.getPhaseColor(phase.current);
     const text = dropUtils.getPhaseDisplayText(phase.current);
@@ -62,16 +100,46 @@ export default function DropCard({
 
   const phaseInfo = getPhaseInfo();
 
-  const handleWaitlistAction = () => {
-    if (userWaitlistStatus?.isJoined) {
-      onLeaveWaitlist?.(drop.id);
-    } else {
-      onJoinWaitlist?.(drop.id);
+  const handleWaitlistAction = async () => {
+    if (!session?.user) return;
+    
+    const isCurrentlyJoined = optimisticState?.isJoined ?? !!waitlistEntry;
+    
+    try {
+      if (isCurrentlyJoined) {
+        setOptimisticState({ isJoined: false });
+        const success = await leaveWaitlist(drop.id);
+        if (success) {
+          setOptimisticState({ isJoined: false });
+        } else {
+          setOptimisticState(null);
+        }
+      } else {
+        setOptimisticState({ isJoined: true });
+        const success = await joinWaitlist(drop.id);
+        if (success) {
+          setOptimisticState({ isJoined: true });
+        }
+        setTimeout(() => checkWaitlistStatus(drop.id), 1000);
+      }
+    } catch (error) {
+      setOptimisticState(null);
+      logError('Waitlist action failed', error);
     }
   };
 
+  const isLoading = waitlistLoading || optimisticState !== null;
+  const currentState = optimisticState !== null 
+    ? optimisticState
+    : waitlistEntry;
+
   const canJoinWaitlist = dropUtils.canJoinWaitlist(drop);
   const canClaim = dropUtils.canClaim(drop);
+
+  // Use optimistic state for immediate UI feedback
+  const currentWaitlistStatus = session?.user 
+    ? (optimisticState || (waitlistEntry ? { isJoined: true, position: waitlistEntry.position } : { isJoined: false }))
+    : (userWaitlistStatus || { isJoined: false });
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -142,15 +210,22 @@ export default function DropCard({
         )}
 
         {/* Waitlist Status */}
-        {userWaitlistStatus?.isJoined && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-sm text-blue-800">
-              ✓ Joined waitlist
-              {userWaitlistStatus.position && (
-                <span className="ml-2 font-medium">
-                  Position #{userWaitlistStatus.position}
-                </span>
-              )}
+        {currentWaitlistStatus?.isJoined && (
+          <div className="mb-4">
+            <WaitlistPositionTracker 
+              dropId={drop.id}
+              onPositionUpdate={(position, total) => {
+                // Position tracking - only log in development
+              }}
+            />
+          </div>
+        )}
+
+        {/* Waitlist Error */}
+        {waitlistError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="text-sm text-red-800">
+              {waitlistError}
             </div>
           </div>
         )}
@@ -161,13 +236,21 @@ export default function DropCard({
           {phase.current === 'waitlist' && canJoinWaitlist && (
             <button
               onClick={handleWaitlistAction}
+              disabled={waitlistLoading}
               className={`flex-1 py-2 px-4 rounded-md font-medium text-sm transition-colors ${
-                userWaitlistStatus?.isJoined
+                waitlistLoading 
+                  ? 'bg-gray-400 cursor-not-allowed text-white'
+                  : currentWaitlistStatus?.isJoined
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}
             >
-              {userWaitlistStatus?.isJoined ? 'Leave Waitlist' : 'Join Waitlist'}
+              {waitlistLoading 
+                ? 'Loading...'
+                : currentWaitlistStatus?.isJoined 
+                ? 'Leave Waitlist' 
+                : 'Join Waitlist'
+              }
             </button>
           )}
           

@@ -71,7 +71,7 @@ export default function DropsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -136,13 +136,15 @@ export default function DropsPage() {
               <DropCard 
                 key={drop.id} 
                 drop={drop}
-                onJoinWaitlist={() => {
-                  // TODO: Implement waitlist join
-                  console.log('Join waitlist for', drop.id);
+                onJoinWaitlist={(dropId) => {
+                  console.log('✅ Joined waitlist for', dropId);
+                  // Optionally reload drops to refresh counts
+                  setTimeout(() => loadDrops(), 1000);
                 }}
-                onLeaveWaitlist={() => {
-                  // TODO: Implement waitlist leave
-                  console.log('Leave waitlist for', drop.id);
+                onLeaveWaitlist={(dropId) => {
+                  console.log('❌ Left waitlist for', dropId);
+                  // Optionally reload drops to refresh counts
+                  setTimeout(() => loadDrops(), 1000);
                 }}
               />
             ))}

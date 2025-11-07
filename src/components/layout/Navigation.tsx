@@ -56,9 +56,10 @@ export default function Navigation() {
             {[
               { href: '/', label: 'Home', active: true },
               { href: '/drops', label: 'Drops', active: false },
+              { href: '/waitlist', label: 'My Waitlist', active: false, authRequired: true },
               { href: '/about', label: 'About', active: false },
               { href: '/contact', label: 'Contact', active: false }
-            ].map((link) => (
+            ].filter(link => !link.authRequired || session?.user).map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
