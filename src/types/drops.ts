@@ -66,11 +66,40 @@ export interface DropDetailResponse {
 
 export interface WaitlistResponse {
   success: boolean;
+  message?: string;
   data: {
-    entry?: WaitlistEntry;
-    position: number;
-    totalEntries: number;
-    isJoined: boolean;
+    inWaitlist?: boolean;
+    position?: number;
+    message?: string;
+    entry?: {
+      id: string;
+      userId: string;
+      dropId: string;
+      joinedAt: string;
+      priorityScore: number;
+      drop?: {
+        id: string;
+        title: string;
+        claimWindowStart: string;
+        claimWindowEnd: string;
+      };
+    };
+    // Legacy fields for backward compatibility
+    waitlistEntry?: {
+      id: string;
+      position: number;
+      priorityScore: number;
+      joinedAt: string;
+    };
+    drop?: {
+      id: string;
+      name: string;
+      phase: string;
+    };
+    totalWaiting?: number;
+    estimatedClaimChance?: 'high' | 'medium' | 'low';
+    dropId?: string;
+    userId?: string;
   };
 }
 

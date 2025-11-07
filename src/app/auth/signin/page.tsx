@@ -76,7 +76,7 @@ export default function SignInPage() {
 
   return (
     <AuthErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center px-4 py-12">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center px-4 py-12 pt-20">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">

@@ -8,6 +8,8 @@ import {
   ClaimResponse,
   ApiError 
 } from '@/types/drops';
+import { getAuthToken } from './auth-utils';
+import { logApiRequest, logApiResponse } from './logger';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -17,15 +19,26 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T | ApiError> {
   try {
+    // Get authentication token dynamically
+    const authToken = await getAuthToken();
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+      ...options.headers,
+    };
+    
+    // Production-ready logging
+    logApiRequest(options.method || 'GET', `${API_BASE_URL}${endpoint}`, headers);
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     });
 
     const data = await response.json();
+    
+    logApiResponse(response.status, endpoint, response.ok ? undefined : data);
 
     if (!response.ok) {
       return {
@@ -63,46 +76,58 @@ export const dropApi = {
   },
 
   // Get specific drop by ID
-  async getDropById(dropId: string): Promise<DropDetailResponse | ApiError> {
-    return apiRequest<DropDetailResponse>(`/drops/${dropId}`);
+  async getDrop(id: string): Promise<DropDetailResponse | ApiError> {
+    return apiRequest<DropDetailResponse>(`/drops/${id}`);
   },
 
   // Join waitlist for a drop
-  async joinWaitlist(dropId: string, token?: string): Promise<WaitlistResponse | ApiError> {
+  async joinWaitlist(dropId: string): Promise<WaitlistResponse | ApiError> {
     return apiRequest<WaitlistResponse>(`/drops/${dropId}/join`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   },
 
   // Leave waitlist for a drop
-  async leaveWaitlist(dropId: string, token?: string): Promise<WaitlistResponse | ApiError> {
+  async leaveWaitlist(dropId: string): Promise<WaitlistResponse | ApiError> {
     return apiRequest<WaitlistResponse>(`/drops/${dropId}/leave`, {
-      method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      method: 'POST',
     });
   },
 
-  // Get waitlist status for a drop
-  async getWaitlistStatus(dropId: string, token?: string): Promise<WaitlistResponse | ApiError> {
-    return apiRequest<WaitlistResponse>(`/drops/${dropId}/waitlist`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+  // Get waitlist status for a drop (user's own status)
+  async getWaitlistStatus(dropId: string): Promise<WaitlistResponse | ApiError> {
+    return apiRequest<WaitlistResponse>(`/drops/${dropId}/my-waitlist-status`);
   },
 
   // Claim a drop
-  async claimDrop(dropId: string, token?: string): Promise<ClaimResponse | ApiError> {
+  async claimDrop(dropId: string): Promise<ClaimResponse | ApiError> {
     return apiRequest<ClaimResponse>(`/drops/${dropId}/claim`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   },
 
   // Get user's claims
-  async getUserClaims(token?: string): Promise<{ success: boolean; data: any[] } | ApiError> {
-    return apiRequest<{ success: boolean; data: any[] }>('/my-claims', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+  async getUserClaims(): Promise<{ success: boolean; data: any[] } | ApiError> {
+    return apiRequest<{ success: boolean; data: any[] }>('/my-claims');
+  },
+
+  // Get user's waitlists
+  async getUserWaitlists(): Promise<{ 
+    success: boolean; 
+    data: { 
+      waitlists: any[]; 
+      pagination: any;
+      summary: any;
+    } 
+  } | ApiError> {
+    return apiRequest<{ 
+      success: boolean; 
+      data: { 
+        waitlists: any[]; 
+        pagination: any;
+        summary: any;
+      } 
+    }>('/my-waitlists');
   },
 };
 
