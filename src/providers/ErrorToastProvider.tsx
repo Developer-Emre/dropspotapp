@@ -55,7 +55,7 @@ export function ErrorToastProvider({ children }: { children: React.ReactNode }) 
     return () => {
       unregisterToast();
     };
-  }, [addToast, router]);
+  }, [router]); // Remove addToast from dependencies to prevent infinite loop
 
   const contextValue: ErrorToastContextType = {
     showError: (title, message, action) => {

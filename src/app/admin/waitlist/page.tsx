@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { dropApi, isApiError } from '@/lib/dropApi';
 import { Drop } from '@/types/drops';
+import AdminAuthGuard from '@/components/admin/AdminAuthGuard';
+import AdminLayout from '@/components/admin/AdminLayout';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface AdminWaitlistData {
@@ -69,34 +71,38 @@ export default function AdminWaitlistPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
+      <AdminAuthGuard>
+        <AdminLayout>
+          <div className="flex items-center justify-center h-64">
+            <LoadingSpinner />
+          </div>
+        </AdminLayout>
+      </AdminAuthGuard>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto px-4">
+      <AdminAuthGuard>
+        <AdminLayout>
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-red-800">{error}</p>
           </div>
-        </div>
-      </div>
+        </AdminLayout>
+      </AdminAuthGuard>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <AdminAuthGuard>
+      <AdminLayout>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Admin Waitlist Dashboard
+            Waitlist Management
           </h1>
           <p className="mt-2 text-gray-600">
-            Tüm drops için waitlist durumunu takip edin
+            Monitor and manage waitlists across all drops.
           </p>
         </div>
 
@@ -220,7 +226,7 @@ export default function AdminWaitlistPage() {
             <p className="text-gray-500">No waitlist data available</p>
           </div>
         )}
-      </div>
-    </div>
+      </AdminLayout>
+    </AdminAuthGuard>
   );
 }

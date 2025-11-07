@@ -67,9 +67,16 @@ export default function Navigation() {
               { href: '/drops', label: 'Drops' },
               { href: '/waitlist', label: 'My Waitlist', authRequired: true },
               { href: '/my-claims', label: 'My Claims', authRequired: true },
+              ...(session?.user && 'role' in session.user && session.user.role === 'ADMIN' ? [
+                { href: '/admin', label: 'Dashboard', adminRequired: true }
+              ] : []),
               { href: '/about', label: 'About' },
               { href: '/contact', label: 'Contact' }
-            ].filter(link => !link.authRequired || session?.user).map((link) => {
+            ].filter(link => {
+              if (link.authRequired && !session?.user) return false;
+              if (link.adminRequired && session?.user && 'role' in session.user && session.user.role !== 'ADMIN') return false;
+              return true;
+            }).map((link) => {
               const isActive = pathname === link.href;
               return (
               <Link
@@ -163,6 +170,9 @@ export default function Navigation() {
                 ...(session?.user ? [
                   { href: '/waitlist', label: 'My Waitlist' },
                   { href: '/my-claims', label: 'My Claims' }
+                ] : []),
+                ...((session?.user as any)?.role === 'ADMIN' ? [
+                  { href: '/admin', label: 'Dashboard' }
                 ] : []),
                 { href: '/about', label: 'About' },
                 { href: '/contact', label: 'Contact' }
