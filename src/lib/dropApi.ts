@@ -41,11 +41,23 @@ async function apiRequest<T>(
     logApiResponse(response.status, endpoint, response.ok ? undefined : data);
 
     if (!response.ok) {
+      // Debug log to see what backend sends
+      console.log('🐛 API Error Response:', { 
+        status: response.status, 
+        data,
+        dataMessage: data.message,
+        dataErrorMessage: data.error?.message,
+        fullData: JSON.stringify(data, null, 2)
+      });
+      
+      // Extract the correct error message from nested structure
+      const errorMessage = data.error?.message || data.message || `HTTP Error: ${response.status}`;
+      
       return {
         success: false,
         error: {
-          message: data.message || `HTTP Error: ${response.status}`,
-          code: data.code || response.status.toString(),
+          message: errorMessage,
+          code: data.error?.code || data.code || response.status.toString(),
           details: data,
         },
       } as ApiError;
@@ -109,6 +121,35 @@ export const dropApi = {
   // Get user's claims
   async getUserClaims(): Promise<{ success: boolean; data: any[] } | ApiError> {
     return apiRequest<{ success: boolean; data: any[] }>('/my-claims');
+  },
+
+  // Get claim status for a specific drop
+  async getClaimStatus(dropId: string): Promise<ClaimResponse | ApiError> {
+    return apiRequest<ClaimResponse>(`/drops/${dropId}/claim-status`);
+  },
+
+  // Complete a pending claim
+  async completeClaim(claimId: string): Promise<ClaimResponse | ApiError> {
+    return apiRequest<ClaimResponse>(`/claims/${claimId}/complete`, {
+      method: 'POST',
+    });
+  },
+
+  // Get claim history with filters
+  async getClaimHistory(filters?: {
+    status?: 'pending' | 'completed' | 'expired';
+    limit?: number;
+    offset?: number;
+  }): Promise<{ success: boolean; data: any[]; count: number } | ApiError> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.offset) params.append('offset', filters.offset.toString());
+    
+    const queryString = params.toString();
+    const endpoint = `/my-claims${queryString ? `?${queryString}` : ''}`;
+    
+    return apiRequest<{ success: boolean; data: any[]; count: number }>(endpoint);
   },
 
   // Get user's waitlists
