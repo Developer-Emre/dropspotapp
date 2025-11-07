@@ -35,38 +35,17 @@ export default function AdminAuthGuard({ children }: AdminAuthGuardProps) {
 
   // Show loading while checking authentication
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <LoadingSpinner size="lg" />
-          <p className="mt-4 text-sm text-gray-600">Verifying admin access...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner variant="fullscreen" text="Verifying admin access..." />;
   }
 
   // Show loading while redirecting unauthenticated users
   if (status === 'unauthenticated') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <LoadingSpinner size="lg" />
-          <p className="mt-4 text-sm text-gray-600">Redirecting to sign in...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner variant="fullscreen" text="Redirecting to sign in..." />;
   }
 
   // Show loading while redirecting non-admin users
   if (session && (session.user as any)?.role !== 'ADMIN') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <LoadingSpinner size="lg" />
-          <p className="mt-4 text-sm text-gray-600">Access denied. Redirecting...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner variant="fullscreen" text="Access denied. Redirecting..." />;
   }
 
   // User is authenticated and is admin
