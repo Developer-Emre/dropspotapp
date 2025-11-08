@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Drop } from '@/types/drops';
@@ -227,27 +226,6 @@ export default function DropCard({
           </div>
         )}
 
-        {/* Waitlist Status */}
-        {currentWaitlistStatus?.isJoined && (
-          <div className="mb-4">
-            <WaitlistPositionTracker 
-              dropId={drop.id}
-              onPositionUpdate={(position, total) => {
-                // Position tracking - only log in development
-              }}
-            />
-          </div>
-        )}
-
-        {/* Waitlist Error */}
-        {waitlistError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <div className="text-sm text-red-800">
-              {waitlistError}
-            </div>
-          </div>
-        )}
-
         {/* Actions */}
         <div className="flex gap-2">
           {/* Primary Action Button */}
@@ -313,14 +291,6 @@ export default function DropCard({
               Ended
             </button>
           )}
-
-          {/* View Details Button */}
-          <Link
-            href={`/drops/${drop.id}`}
-            className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md font-medium text-sm transition-colors"
-          >
-            View
-          </Link>
         </div>
       </div>
     </div>
