@@ -295,16 +295,10 @@ export default function WaitlistDashboard() {
                         
                         {/* Action Buttons */}
                         <div className="flex gap-2 pt-2">
-                          <Link
-                            href={`/drops/${entry.drop.id}`}
-                            className="flex-1 text-center py-2 px-4 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md text-sm font-medium"
-                          >
-                            View Drop
-                          </Link>
                           {entry.canClaim && (
                             <Link
                               href={`/drops/${entry.drop.id}`}
-                              className="flex-1 text-center py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium"
+                              className="w-full text-center py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm font-medium"
                             >
                               Claim Now
                             </Link>
