@@ -136,7 +136,9 @@ export const loginUser = async (credentials: LoginCredentials): Promise<Register
 
   return {
     success: false,
-    error: response.error?.message || response.message || 'Login failed',
+    error: typeof response.error === 'string' 
+      ? response.error 
+      : response.error?.message || response.message || 'Login failed',
     message: response.message,
     status: response.status
   }
@@ -174,7 +176,9 @@ export const registerUser = async (userData: RegisterRequest): Promise<RegisterR
 
   return {
     success: false,
-    error: response.error?.message || response.message || 'Registration failed',
+    error: typeof response.error === 'string' 
+      ? response.error 
+      : response.error?.message || response.message || 'Registration failed',
     message: response.message,
     status: response.status
   }

@@ -123,11 +123,12 @@ export interface ClaimResponse {
 // API Error Response
 export interface ApiError {
   success: false;
-  error: {
+  error: string | {
     message: string;
     code?: string;
     details?: any;
   };
+  message?: string;
 }
 
 // Helper types for UI components

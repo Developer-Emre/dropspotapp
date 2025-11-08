@@ -46,12 +46,15 @@ async function apiRequest<T>(
         status: response.status, 
         data,
         dataMessage: data.message,
-        dataErrorMessage: data.error?.message,
+        dataError: data.error,
+        dataErrorType: typeof data.error,
         fullData: JSON.stringify(data, null, 2)
       });
       
       // Extract the correct error message from nested structure
-      const errorMessage = data.error?.message || data.message || `HTTP Error: ${response.status}`;
+      const errorMessage = typeof data.error === 'string' 
+        ? data.error 
+        : data.error?.message || data.message || `HTTP Error: ${response.status}`;
       
       return {
         success: false,
