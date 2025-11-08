@@ -5,11 +5,13 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useRegister } from '@/hooks/useRegister'
 import { getFieldError, hasFieldError } from '@/lib/validators'
 import Button from '@/components/ui/Button'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { useErrorToast } from '@/providers/ErrorToastProvider'
 import type { RegisterFormData } from '@/types/auth'
 
@@ -19,9 +21,11 @@ import type { RegisterFormData } from '@/types/auth'
 
 export default function RegisterPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const { data: session, status } = useSession()
   const { register, isLoading, errors, clearErrors } = useRegister()
 
-  // Form state
+  // Form state - hooks must be called unconditionally
   const [formData, setFormData] = useState<RegisterFormData>({
     name: '',
     surname: '',
@@ -32,6 +36,13 @@ export default function RegisterPage() {
 
   // Get initial message from URL params (e.g., redirect from signin)
   const initialMessage = searchParams?.get('message')
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/') // Redirect to home page
+    }
+  }, [status, router])
 
   /**
    * Handle form submission
@@ -71,6 +82,18 @@ export default function RegisterPage() {
         : 'border-gray-300 bg-white/50 hover:border-gray-400'
     }`
   }, [errors])
+
+  // All hooks called - now we can do conditional rendering
+  
+  // Show loading while checking authentication
+  if (status === 'loading') {
+    return <LoadingSpinner variant="fullscreen" text="Loading..." />
+  }
+
+  // Don't render anything if already authenticated (will redirect)
+  if (status === 'authenticated') {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex items-center justify-center px-4 py-12 pt-20">
@@ -170,7 +193,7 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleInputChange}
                 className={getInputClasses('password')}
-                placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number"
+                placeholder="Password"
                 disabled={isLoading}
               />
               {getFieldError(errors, 'password') && (

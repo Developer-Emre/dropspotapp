@@ -2,11 +2,14 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ErrorMessage from '@/components/ui/ErrorMessage';
 import { Drop, ClaimStatus } from '@/types/drops';
 import { useClaimStore, useClaimForDrop, useClaimLoading, useClaimError } from '@/store/claimStore';
+import { useErrorToast } from '@/providers/ErrorToastProvider';
 import { logUserAction, logError } from '@/lib/logger';
 
 // Mock dropUtils for now
@@ -46,6 +49,9 @@ export function ClaimButton({
   onError,
 }: ClaimButtonProps) {
   const [hasClicked, setHasClicked] = useState(false);
+  const { data: session } = useSession();
+  const router = useRouter();
+  const { showError, showSuccess } = useErrorToast();
   
   // Memoize store actions to prevent unnecessary re-renders
   const claimDrop = useClaimStore(state => state.claimDrop);
@@ -128,7 +134,6 @@ export function ClaimButton({
     
     return {
       text: 'Claim Now',
-      emoji: '⬇️',
       variant: variant,
       disabled: false,
     };
@@ -137,6 +142,17 @@ export function ClaimButton({
   const isDisabled = disabled || buttonState.disabled || isLoading;
 
   const handleClaim = async () => {
+    // Check authentication first - senior UX pattern
+    if (!session) {
+      // Professional toast message for unauthenticated users
+      showError('Sign In Required', 'Please sign in to claim this drop. You\'ll be redirected right back here!');
+      
+      // Redirect to signin with callback to preserve user intent
+      const callbackUrl = `/drops/${drop.id}`;
+      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      return;
+    }
+
     if (isDisabled || !canClaim || existingClaim) return;
     
     setHasClicked(true);
@@ -153,6 +169,10 @@ export function ClaimButton({
         // Get the latest claim data after successful claim
         const latestClaim = useClaimStore.getState().claimsByDrop.get(drop.id);
         const claimData = latestClaim ? useClaimStore.getState().claims.get(latestClaim) : null;
+        
+        // Show success toast for successful claim
+        showSuccess('Drop Claimed!', 'Congratulations! You have successfully claimed this drop. Check My Claims for details.');
+        
         onSuccess?.(claimData?.id || '');
       } else {
         const currentError = useClaimStore.getState().errors.claiming.get(drop.id);
@@ -184,27 +204,6 @@ export function ClaimButton({
           </>
         )}
       </Button>
-      
-      {/* Note: Error handling now managed by central error handler with toast notifications */}
-      {/* Keeping this for fallback but toast system takes precedence */}
-      {error && hasClicked && process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-2">
-          <div className="flex items-center">
-            <span className="mr-2">🐛</span>
-            <span>Debug: {error}</span>
-          </div>
-        </div>
-      )}
-      
-      {/* Success message */}
-      {existingClaim && hasClicked && !error && (
-        <div className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg p-2">
-          <div className="flex items-center">
-            <span className="mr-2">✅</span>
-            <span>Successfully claimed! Check My Claims for details.</span>
-          </div>
-        </div>
-      )}
       
       {/* Claim info */}
       {existingClaim && (

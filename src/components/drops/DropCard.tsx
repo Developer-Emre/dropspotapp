@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Drop } from '@/types/drops';
 import { dropUtils } from '@/lib/dropApi';
 import { logUserAction, logError } from '@/lib/logger';
@@ -17,6 +18,7 @@ import {
 } from '@/store/waitlistStore';
 import { ClaimButton } from '@/components/claims/ClaimButton';
 import WaitlistPositionTracker from './WaitlistPositionTracker';
+import { useErrorToast } from '@/providers/ErrorToastProvider';
 
 interface DropCardProps {
   drop: Drop;
@@ -35,6 +37,8 @@ export default function DropCard({
   userWaitlistStatus 
 }: DropCardProps) {
   const { data: session } = useSession();
+  const router = useRouter();
+  const { showError, showSuccess } = useErrorToast();
   
   // Zustand store selectors - individual selectors for stability
   const waitlistEntry = useWaitlistEntry(drop.id);
@@ -102,7 +106,16 @@ export default function DropCard({
   const phaseInfo = getPhaseInfo();
 
   const handleWaitlistAction = async () => {
-    if (!session?.user) return;
+    // Check authentication first - senior UX pattern
+    if (!session?.user) {
+      // Professional toast message for unauthenticated users
+      showError('Sign In Required', 'Please sign in to join the waitlist. You\'ll be redirected right back here!');
+      
+      // Redirect to signin with callback to preserve user intent
+      const callbackUrl = `/drops/${drop.id}`;
+      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      return;
+    }
     
     const isCurrentlyJoined = optimisticState?.isJoined ?? !!waitlistEntry;
     
@@ -112,6 +125,8 @@ export default function DropCard({
         const success = await leaveWaitlist(drop.id);
         if (success) {
           setOptimisticState({ isJoined: false });
+          // Show success toast for leaving waitlist
+          showSuccess('Left Waitlist', 'You have successfully left the waitlist for this drop.');
         } else {
           setOptimisticState(null);
         }
@@ -120,6 +135,8 @@ export default function DropCard({
         const success = await joinWaitlist(drop.id);
         if (success) {
           setOptimisticState({ isJoined: true });
+          // Show success toast for joining waitlist
+          showSuccess('Joined Waitlist', 'You have been added to the waitlist! Check your position below.');
         }
         setTimeout(() => checkWaitlistStatus(drop.id), 1000);
       }

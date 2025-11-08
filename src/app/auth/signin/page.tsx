@@ -4,12 +4,14 @@
 
 'use client'
 
-import { useState, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useCallback, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useSignIn } from '@/hooks/useSignIn'
 import { getFieldError, hasFieldError } from '@/lib/validators'
 import Button from '@/components/ui/Button'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { AuthErrorBoundary } from '@/components/ErrorBoundary'
 import type { SignInFormData } from '@/types/auth'
 
@@ -19,13 +21,23 @@ import type { SignInFormData } from '@/types/auth'
 
 export default function SignInPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
+  const { data: session, status } = useSession()
   const { signInUser, isLoading, errors, clearErrors } = useSignIn()
 
-  // Form state
+  // Form state - hooks must be called unconditionally
   const [formData, setFormData] = useState<SignInFormData>({
     email: '',
     password: ''
   })
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const callbackUrl = searchParams?.get('callbackUrl') || '/drops'
+      router.push(callbackUrl) // Redirect to callback URL or home
+    }
+  }, [status, router, searchParams])
 
   /**
    * Handle form submission
@@ -65,6 +77,18 @@ export default function SignInPage() {
         : 'border-gray-300 bg-white/50 hover:border-gray-400'
     }`
   }, [errors])
+
+  // All hooks called - now we can do conditional rendering
+  
+  // Show loading while checking authentication
+  if (status === 'loading') {
+    return <LoadingSpinner variant="fullscreen" text="Loading..." />
+  }
+
+  // Don't render anything if already authenticated (will redirect)
+  if (status === 'authenticated') {
+    return null
+  }
 
   return (
     <AuthErrorBoundary>
