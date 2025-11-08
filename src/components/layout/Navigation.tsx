@@ -69,9 +69,7 @@ export default function Navigation() {
               { href: '/my-claims', label: 'My Claims', authRequired: true },
               ...(session?.user && 'role' in session.user && session.user.role === 'ADMIN' ? [
                 { href: '/admin', label: 'Dashboard', adminRequired: true }
-              ] : []),
-              { href: '/about', label: 'About' },
-              { href: '/contact', label: 'Contact' }
+              ] : [])
             ].filter(link => {
               if (link.authRequired && !session?.user) return false;
               if (link.adminRequired && session?.user && 'role' in session.user && session.user.role !== 'ADMIN') return false;
@@ -173,9 +171,7 @@ export default function Navigation() {
                 ] : []),
                 ...((session?.user as any)?.role === 'ADMIN' ? [
                   { href: '/admin', label: 'Dashboard' }
-                ] : []),
-                { href: '/about', label: 'About' },
-                { href: '/contact', label: 'Contact' }
+                ] : [])
               ].map((link) => {
                 const isActive = pathname === link.href;
                 return (
