@@ -60,8 +60,12 @@ export const useWaitlistStore = create<WaitlistState>()(
         const response = await dropApi.joinWaitlist(dropId);
 
         if (isApiError(response)) {
+          const errorMessage = typeof response.error === 'string' 
+            ? response.error 
+            : response.error.message || 'Unknown error occurred';
+            
           set((state) => ({
-            errors: { ...state.errors, [dropId]: response.error.message },
+            errors: { ...state.errors, [dropId]: errorMessage },
             isLoading: { ...state.isLoading, [dropId]: false },
           }));
           return false;
@@ -111,8 +115,12 @@ export const useWaitlistStore = create<WaitlistState>()(
         const response = await dropApi.leaveWaitlist(dropId);
 
         if (isApiError(response)) {
+          const errorMessage = typeof response.error === 'string' 
+            ? response.error 
+            : response.error.message || 'Unknown error occurred';
+            
           set((state) => ({
-            errors: { ...state.errors, [dropId]: response.error.message },
+            errors: { ...state.errors, [dropId]: errorMessage },
             isLoading: { ...state.isLoading, [dropId]: false },
           }));
           return false;
@@ -147,9 +155,14 @@ export const useWaitlistStore = create<WaitlistState>()(
         const response = await dropApi.getWaitlistStatus(dropId);
 
         if (isApiError(response)) {
-          if (response.error.code !== 'NOT_IN_WAITLIST') {
+          const errorCode = typeof response.error === 'string' ? null : response.error.code;
+          if (errorCode !== 'NOT_IN_WAITLIST') {
+            const errorMessage = typeof response.error === 'string' 
+              ? response.error 
+              : response.error.message || 'Unknown error occurred';
+              
             set((state) => ({
-              errors: { ...state.errors, [dropId]: response.error.message },
+              errors: { ...state.errors, [dropId]: errorMessage },
             }));
           }
           return;

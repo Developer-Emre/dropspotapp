@@ -133,16 +133,21 @@ const useClaimStore = create<ClaimStore>()(
         if (isApiError(response)) {
           revertOptimisticUpdate(dropId);
           
+          // Safe error message extraction
+          const errorMessage = typeof response.error === 'string' 
+            ? response.error 
+            : response.error.message || 'Unknown error occurred';
+          
           // Debug logging to check error format
           logDebug('Claim error received', { 
-            message: response.error.message,
+            message: errorMessage,
             fullResponse: response 
           });
           
           // Use central error handler instead of manual error mapping
           const apiErrorForHandler: ApiError = {
             success: false,
-            message: response.error.message,
+            message: errorMessage,
             status: 403, // Set correct status for waitlist errors
           };
           
@@ -255,10 +260,14 @@ const useClaimStore = create<ClaimStore>()(
         const response = await dropApi.completeClaim(claimId);
 
         if (isApiError(response)) {
+          const errorMessage = typeof response.error === 'string' 
+            ? response.error 
+            : response.error.message || 'Unknown error occurred';
+            
           set(state => ({
             errors: {
               ...state.errors,
-              completing: new Map([...state.errors.completing, [claimId, response.error.message]]),
+              completing: new Map([...state.errors.completing, [claimId, errorMessage]]),
             },
           }));
           
@@ -326,7 +335,8 @@ const useClaimStore = create<ClaimStore>()(
 
         if (isApiError(response)) {
           // If API fails, provide mock data for development
-          if (response.error.code === 'NETWORK_ERROR') {
+          const errorCode = typeof response.error === 'string' ? null : response.error.code;
+          if (errorCode === 'NETWORK_ERROR') {
             logInfo('Using mock data for claims - API not available');
             
             // Mock claims data
@@ -382,8 +392,12 @@ const useClaimStore = create<ClaimStore>()(
             return;
           }
           
+          const errorMessage = typeof response.error === 'string' 
+            ? response.error 
+            : response.error.message || 'Unknown error occurred';
+          
           set(state => ({
-            errors: { ...state.errors, fetching: response.error.message },
+            errors: { ...state.errors, fetching: errorMessage },
           }));
           logError('Store fetch claims failed', response.error);
           return;
@@ -458,7 +472,8 @@ const useClaimStore = create<ClaimStore>()(
 
         if (isApiError(response)) {
           // 404 is expected if user hasn't claimed
-          if (response.error.code !== '404') {
+          const errorCode = typeof response.error === 'string' ? null : response.error.code;
+          if (errorCode !== '404') {
             logError('Store fetch claim status failed', response.error);
           }
           return null;
