@@ -30,7 +30,7 @@ export function useSignIn(): UseSignInReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
   const router = useRouter()
-  const { showSuccess } = useErrorToast()
+  const { showSuccess, showError } = useErrorToast()
 
   /**
    * Clear validation errors
@@ -66,23 +66,15 @@ export function useSignIn(): UseSignInReturn {
       if (result?.error) {
         // NextAuth error - could be invalid credentials or server error
         let errorMessage = 'Invalid email or password';
-        let statusCode = 401;
         
         // Try to parse more specific error info from result
         if (result.error === 'CredentialsSignin') {
           errorMessage = 'Invalid email or password';
-          statusCode = 401;
         } else if (result.error.includes('fetch')) {
           errorMessage = 'Unable to connect to server';
-          statusCode = 500;
         }
         
-        const apiError: ApiError = {
-          success: false,
-          message: errorMessage,
-          status: statusCode
-        };
-        errorHandler.handleError(apiError, 'auth_login');
+        showError('Sign In Failed', errorMessage);
         return
       }
 
@@ -94,11 +86,11 @@ export function useSignIn(): UseSignInReturn {
     } catch (error) {
       console.error('Sign in error:', error)
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      errorHandler.handleError(new Error(errorMessage), 'auth_login');
+      showError('Sign In Failed', errorMessage);
     } finally {
       setIsLoading(false)
     }
-  }, [router, showSuccess])
+  }, [router, showSuccess, showError])
 
   return {
     signInUser,

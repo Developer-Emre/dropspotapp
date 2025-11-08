@@ -43,7 +43,7 @@ interface UseRegisterReturn extends UseRegisterState, UseRegisterActions {}
  */
 export const useRegister = (): UseRegisterReturn => {
   const router = useRouter()
-  const { showSuccess } = useErrorToast()
+  const { showSuccess, showError } = useErrorToast()
   
   // State management
   const [state, setState] = useState<UseRegisterState>({
@@ -77,17 +77,15 @@ export const useRegister = (): UseRegisterReturn => {
    * @param response - Failed registration response
    */
   const handleRegistrationFailure = useCallback((response: RegisterResponse): void => {
-    const apiError: ApiError = {
-      success: false,
-      message: response.error || response.message || 'Registration failed',
-      status: response.status || 400
-    };
-    errorHandler.handleError(apiError, 'auth_register');
+    // Show user-friendly error message
+    const errorMessage = response.error || response.message || 'Registration failed';
+    showError('Registration Failed', errorMessage);
+    
     setState(prev => ({ 
       ...prev, 
       isLoading: false 
     }))
-  }, [])
+  }, [showError])
 
   /**
    * Register user
@@ -122,6 +120,9 @@ export const useRegister = (): UseRegisterReturn => {
 
       // Call registration API
       const response = await registerUser(registerData)
+      
+      // Debug: log the response to see what we're getting
+      console.log('Registration response:', response)
 
       if (response.success) {
         // Handle successful registration
@@ -133,7 +134,7 @@ export const useRegister = (): UseRegisterReturn => {
     } catch (error) {
       console.error('Registration error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
-      errorHandler.handleError(new Error(errorMessage), 'auth_register');
+      showError('Registration Failed', errorMessage);
       setState(prev => ({ 
         ...prev, 
         isLoading: false 
